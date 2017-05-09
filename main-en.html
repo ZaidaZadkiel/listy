@@ -1,0 +1,64 @@
+<html>
+<title>Lispy Scripting Language</title>
+<body>
+<p>
+Lispy is a stack based interpreted language based on Lisp and FORTH programming languages.<br>
+</p>
+<p>
+The basic syntax is this:<br>
+<code>( operator argument-list )</code><br>
+<code>(</code>, <code>)</code> delimit an <i>expression</i><br>
+<code>operator</code> calls either a primitive or a previously defined function.<br>
+<code>argument-list</code> is a list of arguments pushed to the stack from right to left (i.e. the right-most elements are pushed first).<br>
+</p>
+<p>
+Each element of a line of code is separated by whitespace which can be <code>space</code> or <code>tab</code>, and in some cases <code>return</code> characters (20d, 14d or 10d, respectively).<br>
+A line of code is represented by one or more <i>expressions</i>.<br>
+</p>
+<p>
+Operators.<br>
+The basic primitives are these:<br>
+<table>
+<tr>
+	<td>+</td><td>Add</td>
+	<td>Will add all the numeric elements in the expression</td>
+</tr>
+<tr>
+	<td>-</td><td>Substract</td>
+	<td>Will Substract all the numeric elements in the expression, starting with the leftmost element, so (- 3 2) returns 1</td>
+</tr>
+<tr>
+	<td>/</td><td>Division</td>
+	<td>Will divide each numeric element in the expression, starting with the leftmost element, so (/ 16 4) returns 4</td>
+</tr>
+<tr>
+	<td>*</td><td>Multiply</td>
+	<td>Will multiply each element in the expression.</td>
+</tr>
+<tr>
+	<td>'</td><td>Quote</td>
+	<td>Pushes all elements in the expression to the stack.</td>
+</tr>
+<tr>
+	<td>:</td><td>Define</td>
+	<td>Defines a symbol in the program</td>
+</tr>
+</table>
+</p>
+<p>
+Examples and analysis.<BR>
+<code>(+ 1 (- 2 3) 4 (* 5 6) 7 (/ 8 2))</code><br>
+Retrns 45.<br>
+Let us examine the execution of this code.
+</p>
+<p>
+Lispy reads each expression from right to left, pushing each parameter to the stack until it finds the opening parentheses <code>(</code>, it then executes the operand on the stack.<br>
+Internally, when an expresion is closed (reaches the <code>(</code> symbol) it will push the number of values inside the expresion and then the operator.<br>
+If a value in the expression is another expression, it will first solve this expression then continue with the rest of the parent expression.<br>
+In this example we have an expression which contains other 3 expressions, so it starts solving from right to left, and finds the expression <code>(/ 8 2)</code>, which it solves like so:
+Read the symbol ), opens a new expression.<br>
+Read the value 2, pushes it at the top of the stack.<br>
+Read the value 8, pushes it at the top of the stack.<br>
+Read the symbol /, pushes the number of parameters and then the code of the symbol.<br>
+Read the symbol (, executes a loop the number of values, executing the operator on the top 2 values until all values pushed are operated on.<br>
+</body>

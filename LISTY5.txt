@@ -1,0 +1,132 @@
+LISTY 5.1
+date: sept 2016
+update date: may 08 2017
+
+installation details:
+http://libevent.org/ download libEvent2 for installing from source, from a version compatible with 2.18. Listy still does not use any advanced libEvent functions.
+
+When run, the current test is:
+e->code: (+ (% nombre (% parametro) (+ 1 parametro) ) (nombre (10))
+
+Listy6 is an attempt to integrate listy5 within a container app which uses libEvent2 for its I/O and create some user-like interaction.
+
+The purpose of listy is to make a small scrpting engine for real time applications, with an emphasis on small.
+
+debatable:
+
+I wonder if it is important to parse first the text as an intermediate data representation, parsing directly from text seems wasteful, also using an intermediary processing
+may in theory help with the recognition of data types, like negative and hexadecimal numbers.
+
+
+implementation details:
+
+/* general definitions */
+listy5 uses true as value 0xffffff rather than value 0x1
+#define true    -1
+
+false still is zero
+#define false      0
+#define MAX_LEN 1024
+
+char  *text;
+
+/* reply buffer */
+char *buffer[1024];
+
+uses 3 datatypes:
+
+environment for running the parser
+typedef struct env  env;
+
+the list of defined names in the environment
+typedef struct name name;
+
+the list of the code/data inside the environment to be executed
+typedef struct list list;
+
+
+the structure list is the basic type
+struct list {
+
+type defines what data is held in the list node called "data" and is accesed as "list n.data = (list)n; n.type = TYPE_LIST"
+  int   type;
+  union {
+    int    d;
+    float  f;
+    char  *s;
+    list  *l;
+    env   *e;
+    name  *n;
+  } data;
+
+  list *n; /* next list, if == NULL, this is the last element */
+};
+
+struct name {
+  char  *name;
+  char **args; /* maybe could be changed to list **args, which would help type strength */
+  list  *l;
+};
+
+struct env{
+  char *code; /*                                                */
+  int   len;  /* this three elements are not needed for evaling */
+  int   ptr;  /*                                                */
+  list *program;
+
+  struct {
+    name **ptr;
+    int    len;
+    int    used;
+  } names;
+
+  env *parent;
+  int  flags;
+  int  running;
+}; /* struct env */
+
+/* misc */
+int    test                 (char*);
+int    iswspc               (char);
+int    isnum                (char);
+int    get_numeric          (char*);
+char*  get_string           (char*);
+int    set_conn_fd          (int);
+
+/* marks */
+int    get_next_mark        (int);
+int    set_mark             (int, int);
+
+/* environment */
+void   print_env            (env*);
+env   *create_env           (env *);
+int    init_env             (env*, char*);
+
+/* names */
+void   print_names          (env*);
+void   print_name           (name*);
+int    add_name             (name*, env*);
+name  *find_name            (char*, env*);
+name  *create_name          (name*);
+
+/* lists */
+list  *create_list          (list*);
+list  *copy_list            (list*, list*);
+void   free_list            (list*);
+void   print_list           (list*);
+void   print_list_wd        (list*, int);
+list  *load                 (char*);
+list  *load_ws              (env*);
+list  *solve_list_we        (list*, env*);
+list  *solve_list           (list*);
+list  *solve_op             (list*, env*);
+list  *solve_name           (list*, env*);
+list  *create_list_numeric  (int);
+list  *set_list_numeric     (list*, int);
+list  *eval                 (char*);
+void   print_type           (list*);
+void   print_value          (list*);
+int    count_elements       (list*);
+int    count_all_lists      ();
+void   print_all_lists      ();
+int    find_list            (list *l);

@@ -1,0 +1,79 @@
+<html>
+<title>Lispy Scripting Language</title>
+<body>
+<p>
+Lispy es un lenguaje interpretado basado en stack, basado en los lenguajes de programaci&oacute;n Lisp y FORTH<br>
+</p>
+<p>
+La sint&aacute;xis b&aacute;sica es esta:<br>
+<code>( operador lista-argumentos )</code><br>
+<code>(</code>, <code>)</code> delimitan una <i>expresi&oacute;n</i><br>
+<code>operador</code> ejecuta ya sea un primitivo o una funcion previamente definida.<br>
+<code>lista-argumentos</code> es una lista de argumentos empujada al stack de derecha a izquierda (p.e. Los elementos de la derecha son empujados primero).<br>
+</p>
+<p>
+Cada elemento de una linea de codigo est&aacute; separado por espacios en blanco, que pueden ser <code>espacio</code> o <code>tabulador</code>, y en algunos casos <code>enter</code>, los cuales tienen el codigo numerico 20d, 14d or 10d, respectivamente.<br>
+Una linea de codigo esta representada por una o mas <i>expresiones</i>.<br>
+</p>
+<p>
+Operadores.<br>
+Los primitivos b&aacute;sicos son estos:<br>
+<table>
+<tr>
+	<td>+</td><td>Suma</td>
+	<td>Suma todos los elementos numericos en la expresion. (+ 3 2) regresa 5</td>
+</tr>
+<tr>
+	<td>-</td><td>Resta</td>
+	<td>Resta todos los elementos numericos en la expresion, empezando con el de la izquierda, de modo que (- 3 2) regresa 1<td>
+</tr>
+<tr>
+	<td>/</td><td>Divide</td>
+	<td>Divide cada elemento numerico en la expresion, empezando con el elemento de la izquierda, de modo que (/ 16 2) regresa 8<td>
+</tr>
+<tr>
+	<td>*</td><td>Multiplica</td>
+	<td>Multiplicara cada elemento en la expresion.</td>
+</tr>
+<tr>
+	<td>'</td><td>Quote</td>
+	<td>Genera una lista con los todos valores de la expresion.<td>
+</tr>
+<tr>
+	<td>:</td><td>Define</td>
+	<td>Define un simbolo en el programa</td>
+</tr>
+</table>
+</p>
+<p>
+Lispy hace una diferencia esencial entre un valor o argumento y un operador: El operador es uno o mas caracteres especiales o alfabeticos en el codigo fuente, mientras que un valor es una lista de caracteres numericos en el codigo fuente.<br>
+La unica excepcion es una cadena de caracteres alfanumericos, la cual es una lista.
+</p>
+<p>
+Ejemplos y analisis.<BR>
+<code>(+ 1 2 3))</code><br>
+Regresa 45.<br>
+Examinemos la ejecucion de este codigo.
+</p>
+<p>
+Lispy lee cada expresion de derecha a izquierda, empujando cada parametro al stack, hasta que encuentra un parentesis abriendo <code>(</code>, entonces ejecuta el operando en el stack.<br>
+Internamente, cuando una expresion es cerrada (llega al simbolo <code>(</code>) empujara el numero de valores dentro de la expresion, y despues el c&oacute;digo del operador.<br>
+Si uno de los valores dentro de una expresion es otra expresion, resolver&aacute; primero esta expresion y despues continuar&aacute; resolviendo el resto de la expresion padre.<BR>
+En este ejemplo tenemos una expresion que contiene otras 3 expresiones, de modo que empieza resolviendo de derecha a izquierda, y encuentra la expresion <br>
+<code>(+ 1 2 3)</code><br>
+La cual resuelve asi:<br>
+Lee el simbolo ), abre una nueva expresion.<br>
+Lee el valor 3, lo empuja al final del stack<br>
+Lee el valor 2, lo empuja al final del stack<br>
+Lee el valor 1, lo empuja al final del stack<br>
+Lee el simbolo +, empuja el numero de valores (3) al stack y despues el codigo del simbolo.<br>
+Lee el simbolo (,
+Toma el simbolo + y el numero de argumentos del stack.<br>
+Toma el valor 1 del stack.<br>
+Toma el valor 2 del stack.<br>
+Dado que el simbolo es <code>+</code>, suma 1 + 2 y empuja el resultado 3 al stack.<br>
+Toma el valor 3 del stack (el que acaba de ser empujado).<br>
+Toma el valor 3 del stack.<br>
+Suma 3 + 3 y empuja el resultado 6 al stack.<br>
+Termina la ejecucion.<br>
+</body>

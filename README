@@ -1,0 +1,178 @@
+
+
+ZaLiBaLa
+(Christianized by DMC)
+
+Zaddy's Lisp Based Language.
+
+Zalibala is a functional language, with both dynamic and static typing.
+
+The default is dynamic and can be optionally made static so functions can't accept wrong parameters and point it out at compile / load time.
+
+Loading and compilation occurs at the same time, with an optional pigeon-hole optimization at any point during execution.
+
+The basic data type is the list.
+There are no primitive types which can be used by themselves, everything is contained within lists.
+
+The program itself is a list with several lists.
+
+( root list
+  ( step list )
+  ( another list ( 
+    etc))
+)
+
+% - Defines a name (variable), it can be a simple list, a simple alias, a function list, or a meta list.
+(% name [data]) if no data, it's assumed to be an alias to a writeable list.
+(% constant 1) is a constant named "constant", a read-only list.
+(% structure (name1:type1 name2:type2)) is a meta-list named "structure", it means it's actually an empty list with room for as many elements as defined in the contained list.
+(% function (parameters) (implementation)) is a function list, which should take as many parameters, and transform as per the implementation.
+The parameters list is a meta-list, and the implementation list is a list of lists.
+
+/*-+\ are arithmetic operators, they transform scalar values in the obvious manner. / is scalar division and \ is modular division.
+(+ 1 2) => (3)
+(/ 4 2) => (2)
+
+meta list
+(name:type ... name:type)
+By itself is useless and is thrown as an error.
+Used within a function list or a function means that it is supposed to be filled by another list.
+(% rect (w:scalar h:scalar))
+creates a list named "rect" which is to be filled later with two scalar values, i.e., does not accept lists.
+(% rect-user (rect w:10 h:20))
+creates a list named "rect-user" which uses the same topology as a previously created meta-list named "rect", and fills it with the values.
+(rect 10 20) by itself is a function which returns a list with two values, which can be accessed by name.
+(rect 10 20).w => 10
+(% list (next-node:list data)) creates a new list which can only contain one element pointing to another list of the same type (list) and an element "data" which can contain anything.
+
+; is a comment, it's extended until another ; or end-of-line is found.
+(list ;comment goes here; ) ; this is a end-of-line comment.
+(list ; this list is no longer within a comment;)
+
+for multiline comments, use ;;
+
+;;this is a multiline comment
+;this does nothing.
+(this list is inside the comment, and ignored.)
+here ends the multiline comment ;;
+
+the "@" operator breaks execution and returns to the parent list.
+(. (.. ... (@ ...) {never reached} ) {returns here})
+
+the "?" operator queries a list.
+(? list (queries)) will query a previously created list named "list", then perform a number of queries.
+
+Queries:
+arithmetic queries
+=<>! 
+(? ((1) (29)) ; this is one list with two elements
+ (= (print {they have the same values.\n}))
+ (> (print {first is bigger.\n}))
+ (< (print {second is bigger.\n}))
+ (! (print {they are not equal.\n}) ; ! symbol might change for a unicode equivalent to =/=
+ (@ (print {they are not equal, bigger or lower, or different. This would be the default case.\n}))
+)
+
+lexical queries
+ name, elements, type
+(% rect (w:scalar h:scalar))
+(% r (rect 10 20))
+
+; if this ' was not present, name would be "rect".
+(? 'r ; this is the name for a rect. Notice the '.
+  (print {the name is } (name) { and is of type } (type) {.\n})
+  (print {the list contains } (count elements) { number of elements, which are named:\n}
+    (foreach x elements 
+	  (print {name: } x.name {, type: } x.type {.\n})
+	)
+  )
+)
+=> the name is r and is of type rect.
+the list contains 2 number of elements, which are named:
+name: w, type: scalar.
+name: h, type: scalar.
+
+"name" is a string/stream which spells the name of the list.
+(% variable ())
+(? variable (print (name))) => "variable"
+
+"elements" is a list describing every element inside a given list.
+(% elements (array type value))
+
+accessing elements inside a list.
+
+There are two ways: the lisp style of car/cdr each element, and the C style of naming each element.
+
+lisp style:
+(% list (1 2 3))
+(car list) => (1)
+(cdr list) => (2 3)
+
+each car/cdr can be combined up to 4 levels deep:
+cdr, cadr, cadar, caaaar, cadadr, cddddr etc.
+
+C-ish style:
+(% list (a:1 b:2 c:3)) 
+(list.a) => (1)
+(list!b) => (2 3)
+
+car = .
+cdr = !
+
+. and ! can be also combined, but each element must be named. I don't believe it to be very useful.
+
+(% list (a:1 b:2 c:3 d:4)
+list!a.c => (c:3)
+
+There is also a thing with three-like lists:
+(% list (
+  (% node1
+    (% leaf1 (1 2 3))
+	(% leaf2 (3 4 5))) ; node1
+  (% node2
+    (% leaf1 (5 6))
+	(% leaf2 (7 8))) ; node2
+)) ; list
+
+list.node1.leaf1        => (1 2)
+list!node1              => (node1 node2)
+list.node1              => (node1)
+list.node2!leaf1        => (leaf1 leaf2)
+(car list.node2.leaf1 ) => (1)
+(cdar list.node1.leaf2) => (4)
+
+...
+
+(% r (rect 10 20))
+(function 'r)
+passes a pointer to r.
+
+(% function (r:rect) ( (print r.w) (+ r.w 20)))
+will modify r.w.
+
+(function r) will not modify r, rather, will modify a copy of r
+
+(func 'r) is equivalent to
+(func (address-of-the-name r))
+
+(func r) is equivalent to
+(func (rect w:10 h:20))
+
+When a meta list is created, the name defined for the meta list is actually a function which fills it with the arguments given to the function.
+
+(% metalist (var:scalar list:list)) is similar to:
+
+(% metalist (var list) (
+  ((% var _var) (% list _list))
+))
+
+However, this has no protection against wrong type of variables.
+
+A more elaborated way would be:
+
+(% metalist (var list) (
+  ( ? var (if (type :scalar) then:(% var _var) else:(throw {wrong type for var}:error)))
+  ( ? list (if (type :list) then:(% list _list) else:(throw {wrong type for list}:error)))
+))
+
+: means "is"
