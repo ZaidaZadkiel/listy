@@ -40,7 +40,7 @@ name *names[MAX_LEN]; /* holds all used names */
 env  *envs [MAX_LEN]; /* holds all used environments */
 int  marks [MAX_LEN]; /* marks used elements */
 
-list list_empty = {4, 0, NULL};
+static list list_empty = { 4, {0}, NULL};
 list stack [MAX_LEN];
 
 long solve_call  = 0;
@@ -71,10 +71,12 @@ int set_conn_fd(int fd){
   printf("listy: conn_fd is %d\n", conn_fd);
   conn_fd = fd;
   send(conn_fd, "ready\r\n", 8, 0);
+  return conn_fd;
 }
 
 char *reply_socket(int conn_fd, char *str){
   printf("socket: %d, str: %s\n", conn_fd, str);
+  return str;
 }
 
 /**/
@@ -98,6 +100,7 @@ char *reply2(const  char *fmt, ...){
 //  buffer_ptr += len;
 //  reply_ready = 1;
   printf("%s", text);
+  return text;
 }
 /**/
 
@@ -298,19 +301,29 @@ list *last_list(list *l){
   return l;
 }
 
+list *set_name_body(name *n, list *l){
+  reply2("this should substitute the correponding env->name\n");
+  n->body = l;
+  return ;
+}
 //do_name(e->names.ptr[i], l->n, e);
 list *do_name(name *n, list *l, env *e){
-  print_name(n);
+  //print_name(n);
   
   if(n->args){
     char x[20];
     render_list(l, x, 20);
     reply2("do_name function with l = %s\n", x);
-    env *scope = create_env(e); //create scope for this function call
+    env *scope = e;//create_env(e); //create scope for this function call
     
     list *last = last_list(l);
     print_list(last);
+    
+    reply2("solving args\n");
     list *args = solve_list_we(n->args, scope);
+    if(args->type == TYPE_NAME) set_name_body(args->data.n, l);
+    print_name(args->data.n);
+    reply2("solving body\n");
     list *body = solve_list_we(n->body, scope);
     
     print_list(args);
@@ -318,10 +331,15 @@ list *do_name(name *n, list *l, env *e){
     reply2("end do_name\n");
     return body;
   }else {
-    reply2("do_name symbol substitution\n");
+    char x[100];
+    render_list(l, x, 100);
+    reply2("do_name symbol substitution for name '%s' with l=%s\n", n->name, x);
+    
     int i = 0;
-    while(strcmp(n->name, e->names.ptr[i]->name) != 0) i++;
-    char x[20];
+    while(strcmp(n->name, e->names.ptr[i]->name) != 0) {
+      reply2("e->names.ptr[%d] == %s\n", i, e->names.ptr[i]->name);
+      i++;
+    }
     render_list(e->names.ptr[i]->body, x, 20);
     reply2("found %s\n", x);
     return e->names.ptr[i]->body;
@@ -342,7 +360,7 @@ list *solve_name(list *l, env *e){
   if(l->type == TYPE_SYMBOL){
     /* search for name called l->data.s */
     /* return new list(name) */
-    reply2("searching for %s\n", l->data.s);
+    reply2("solve_name: searching for symbol '%s'\n", l->data.s);
     
     char *target, *source;
     target = l->data.s;
@@ -354,9 +372,21 @@ list *solve_name(list *l, env *e){
         if(strcmp(target, source) == 0) break;
     }
     
-    res = do_name(e->names.ptr[i], l->n, e);
+    
+    print_list(l);
+    reply2("what is next ?");
+    
+    if(l->n == NULL){ 
+      reply2(" null\n");
+      res = do_name(e->names.ptr[i], l, e);
+    } else { 
+      reply2(" a list\n");
+      print_list(l->n);
+      res = do_name(e->names.ptr[i], l->n, e);
+    }
   }
   if(l->type == TYPE_NAME){
+    reply2("solve_name: found name\n");
     /* evaluate list pointed by l->data.n->l */
     /* return new list(eval(l->data.n->l)); */
     print_type(l); reply2(" ");
@@ -414,17 +444,17 @@ int add_name(name *n, env *e){
   e->names.ptr[e->names.used] = n;
   if(false){
     reply2("name n:\n\tname:\t%x\n\targs:\t%x\n\tl:\t%x\n",
-        (unsigned int)n->name,
-        (unsigned int)n->args,
-        (unsigned int)n->body
+        (unsigned long)n->name,
+        (unsigned long)n->args,
+        (unsigned long)n->body
       );
 
     name *p = e->names.ptr[e->names.used];
     reply2("names.ptr[%d]:\n\tname:\t%x\n\targs:\t%x\n\tl:\t%x\n",
         e->names.used,
-        (unsigned int)p->name,
-        (unsigned int)p->args,
-        (unsigned int)p->body
+        (unsigned long)p->name,
+        (unsigned long)p->args,
+        (unsigned long)p->body
       );
   }/* if debug */
   e->names.used++;
@@ -724,6 +754,7 @@ name *do_defun(list *l, env *e){
       reply2("function body  (%s)\n", txtbody);
       
     } else { //if(argv->n != NULL)
+      reply2("do_defun: argv->n is null");
     
       switch(argv->type){
         case TYPE_LIST:{
@@ -872,7 +903,8 @@ void print_name(name *n){
 }
 
 void print_type(list *l){
-  if(l != NULL) reply2(find_printable_type(l->type)); return;
+  if(l != NULL) reply2(find_printable_type(l->type)); 
+  return;
 }
 
 void print_value(list *l){
@@ -1248,22 +1280,24 @@ name *create_name(char *text){
     return NULL;
   }
   
-  reply2("create_name '%s'\n", text);
-  
   name *n = malloc(sizeof(name));
+  int len = strlen(text);
+  
+  n->name = malloc(len);
+  strncpy(n->name, text, len);
+  reply2("create_name: '%s' \n", n->name);
   
   /* use the next available slot in the buffer for storing this name */
   int mark_index = get_next_mark(TYPE_NAME);
   if(mark_index != MAX_LEN){
     set_mark(mark_index, TYPE_NAME);
     names[mark_index] = n;
+    reply2("create_name %s at position %d\n", n->name, mark_index);
   }else{
     /* resize */
     reply2("No available space for new name!\n");
   }
   
-  /* TODO get name length before strdup so as to avoid buffer overrun using strndup*/
-  n->name = strdup(text);
   return n;
 }
 
@@ -1317,8 +1351,8 @@ void print_env(env *e){
     e->code,
     e->names.len,
     e->names.used,
-    (unsigned int)e->names.ptr,
-    (unsigned int)e->parent,
+    (unsigned long)e->names.ptr,
+    (unsigned long)e->parent,
     ((e->flags & ENV_TRON) ? "on" : "off")
   );
   reply2("> program(%s): flags: %04x length: %d\n",
