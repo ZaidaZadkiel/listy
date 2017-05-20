@@ -178,10 +178,10 @@ int render_list (list *l, char *text, int text_len){
         break;
       case TYPE_NAME: 
         //printf("NA %d \n", l->data.d);
-        if( (l->data.n->name == NULL) || (l->data.n == NULL) ) {
-          reply2("render_list error: name is null\n");
+        if( (l->data.n != NULL) ) {
+          if( (l->data.n->name != NULL) )used += sprintf(&text[used], "%s", l->data.n->name);
         } else {
-          used += sprintf(&text[used], "%s", l->data.n->name);
+          reply2("render_list error: name is null\n");
         } //if l->data or l->data->name 
         break;
       case TYPE_SYMBOL: used += sprintf(&text[used], "%s", l->data.s); break;
@@ -847,9 +847,10 @@ list *solve_op(list* l, env *e){
     }/* OP_DEF */
     case OP_ADD:
       res = do_add(l->n, e);
-      l->type   = res->type;
-      l->data.d = res->data.d;
+      l->type = res->type;
+      l->data = res->data;
       l->n = NULL;
+      
       break;
     case OP_MUL:
     {
