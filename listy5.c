@@ -178,7 +178,7 @@ int render_list (list *l, char *text, int text_len){
         break;
       case TYPE_NAME: 
         //printf("NA %d \n", l->data.d);
-        if( (l->data.n == NULL) || (l->data.n->name == NULL) ) {
+        if( (l->data.n->name == NULL) || (l->data.n == NULL) ) {
           reply2("render_list error: name is null\n");
         } else {
           used += sprintf(&text[used], "%s", l->data.n->name);
@@ -277,7 +277,7 @@ list *solve_list_we(list *l, env *e){
     e->flags & ENV_TRON
 #endif
   ){
-    reply2("flag\n");
+    //reply2("flag\n");
     char input[20];
     render_list(l, input, 20);
     char answer[20];
@@ -301,16 +301,19 @@ list *last_list(list *l){
   return l;
 }
 
-list *set_name_body(name *n, list *l){
+list *set_name_data(name *n, list* args, list *body, env *e){
   reply2("this should substitute the correponding env->name\n");
-  n->body = l;
+  n->name = "test";
+  n->e    = e;
+  n->args = args;
+  n->body = body;
   return ;
 }
 //do_name(e->names.ptr[i], l->n, e);
 list *do_name(name *n, list *l, env *e){
   //print_name(n);
   
-  if(n->args){
+  if(n->args != NULL){
     char x[20];
     render_list(l, x, 20);
     reply2("do_name function with l = %s\n", x);
@@ -321,8 +324,10 @@ list *do_name(name *n, list *l, env *e){
     
     reply2("solving args\n");
     list *args = solve_list_we(n->args, scope);
-    if(args->type == TYPE_NAME) set_name_body(args->data.n, l);
+    if(args->type == TYPE_NAME) set_name_data(args->data.n, NULL, l, e);
+    
     print_name(args->data.n);
+    
     reply2("solving body\n");
     list *body = solve_list_we(n->body, scope);
     
@@ -333,7 +338,7 @@ list *do_name(name *n, list *l, env *e){
   }else {
     char x[100];
     render_list(l, x, 100);
-    reply2("do_name symbol substitution for name '%s' with l=%s\n", n->name, x);
+    reply2("do_name symbol substitution for name '%s' with l=%s\n", n->name, find_printable_type(n->body->type));
     
     int i = 0;
     while(strcmp(n->name, e->names.ptr[i]->name) != 0) {
@@ -342,7 +347,9 @@ list *do_name(name *n, list *l, env *e){
     }
     render_list(e->names.ptr[i]->body, x, 20);
     reply2("found %s\n", x);
-    return e->names.ptr[i]->body;
+    list *res = create_list(solve_list_we(e->names.ptr[i]->body, e));
+    res->n = 0;
+    return res;
   }
   
   return NULL;
@@ -377,20 +384,22 @@ list *solve_name(list *l, env *e){
     reply2("what is next ?");
     
     if(l->n == NULL){ 
+      //single symbol 
       reply2(" null\n");
       res = do_name(e->names.ptr[i], l, e);
     } else { 
       reply2(" a list\n");
       print_list(l->n);
-      res = do_name(e->names.ptr[i], l->n, e);
+      res = solve_list_we(l->n, e);
     }
-  }
-  if(l->type == TYPE_NAME){
+  } else if(l->type == TYPE_NAME){
     reply2("solve_name: found name\n");
     /* evaluate list pointed by l->data.n->l */
     /* return new list(eval(l->data.n->l)); */
     print_type(l); reply2(" ");
     print_value(l); reply2("\n");
+  } else {
+    reply2("solve_name: list is not NAME or SYMBOL\n");
   }
 
   return res;
@@ -491,14 +500,19 @@ list *do_add(list *l, env *e){
     r = solve_list_we(r, e);
   }
   
-  h->data.d += r->data.d;
+  if(h->type == TYPE_NUMERIC && r->type == TYPE_NUMERIC){
+    h->data.d += r->data.d;  
+  } else {
+    reply2("do_add error: h type is %s and r type is %s, both should be numeric\n", find_printable_type(h->type), find_printable_type(r->type));
+  }
+  
   
   
 #ifdef DEBUG_LISTY
-  char res[20];
-  char input[20];
-  render_list(h, res,   20);
-  render_list(l, input, 20);
+  char res  [100];
+  char input[100];
+  render_list(h, res,   100);
+  render_list(l, input, 100);
   printf("(+ %s) = (%s)\n", input, res);
 #endif
 
@@ -1292,7 +1306,7 @@ name *create_name(char *text){
   if(mark_index != MAX_LEN){
     set_mark(mark_index, TYPE_NAME);
     names[mark_index] = n;
-    reply2("create_name %s at position %d\n", n->name, mark_index);
+    reply2("create_name: '%s' stored at position %d\n", n->name, mark_index);
   }else{
     /* resize */
     reply2("No available space for new name!\n");
